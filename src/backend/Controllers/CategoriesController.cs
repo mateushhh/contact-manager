@@ -1,4 +1,5 @@
 ﻿using backend.Data;
+using backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,9 @@ namespace backend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCategories()
         {
-            var categories = await _context.Categories.ToListAsync();
+            var categories = await _context.Categories
+                .Include(c => c.Subcategories)
+                .ToListAsync();
 
             // 200 OK
             return Ok(categories);

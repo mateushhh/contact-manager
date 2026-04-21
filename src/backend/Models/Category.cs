@@ -10,5 +10,6 @@ namespace backend.Models
         [Required]
         [MaxLength(50)]
         public string Name { get; set; } = string.Empty;
+        public ICollection<Subcategory> Subcategories { get; set; } = new List<Subcategory>();
     }
 }
