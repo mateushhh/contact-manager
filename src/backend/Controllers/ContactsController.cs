@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
+using System.Text.RegularExpressions;
 
 namespace backend.Controllers
 {
@@ -70,6 +71,13 @@ namespace backend.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateContact([FromBody] Contact newContact)
         {
+            var passRegex = new Regex(@"^(?=.*[A-Z])(?=.*\d).{8,}$");
+            if (string.IsNullOrEmpty(newContact.PasswordHash) || !passRegex.IsMatch(newContact.PasswordHash))
+            {
+                // 400 Bad Request
+                return BadRequest("Password must be at least 8 characters long and contain at least one uppercase letter and one number.");
+            }
+
             var passwordHasher = new PasswordHasher<Contact>();
             newContact.PasswordHash = passwordHasher.HashPassword(newContact, newContact.PasswordHash);
 
@@ -101,6 +109,13 @@ namespace backend.Controllers
 
             if (!string.IsNullOrEmpty(updatedContact.PasswordHash))
             {
+                var passRegex = new Regex(@"^(?=.*[A-Z])(?=.*\d).{8,}$");
+                if (!passRegex.IsMatch(updatedContact.PasswordHash))
+                {
+                    // 400 Bad Request
+                    return BadRequest("New password must be at least 8 characters long and contain at least one uppercase letter and one number.");
+                }
+
                 var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Contact>();
                 existingContact.PasswordHash = passwordHasher.HashPassword(existingContact, updatedContact.PasswordHash);
             }
