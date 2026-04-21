@@ -64,3 +64,5 @@ FROM FamilyWealth
 WHERE EXISTS (SELECT 1 FROM person c WHERE c.father_id = FamilyWealth.person_id OR c.mother_id = FamilyWealth.person_id)
 ORDER BY total_family_income ASC
 LIMIT 1;
+
+-- Columns worth indexing for faster family tree building are: person.father_id, person.mother_id, person.partner_id 
