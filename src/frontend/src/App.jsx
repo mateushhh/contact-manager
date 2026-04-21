@@ -4,6 +4,7 @@ import axios from 'axios';
 function App() {
   // --- CONTACT STATES ---
   const [contacts, setContacts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [error, setError] = useState(null);
 
   // --- LOGIN STATES ---
@@ -18,7 +19,9 @@ function App() {
     lastName: '',
     email: '',
     passwordHash: '',
-    categoryId: 1
+    categoryId: 1,
+    subcategoryId: '',
+    customSubcategory: ''
   });
 
   // --- EDIT STATE ---
@@ -34,8 +37,18 @@ function App() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get('https://localhost:7282/api/categories');
+      setCategories(response.data);
+    } catch (err) {
+      console.error("Failed to fetch categories");
+    }
+  };
+
   useEffect(() => {
     fetchContacts();
+    fetchCategories();
   }, []);
 
   // --- LOGIN / LOGOUT FUNCTIONS ---
@@ -87,18 +100,25 @@ function App() {
   // --- CREATE FUNCTION ---
   const handleCreate = async (e) => {
     e.preventDefault();
+    
+    const payload = {
+      ...newContact,
+      subcategoryId: newContact.subcategoryId === '' ? null : parseInt(newContact.subcategoryId),
+      customSubcategory: newContact.customSubcategory === '' ? null : newContact.customSubcategory
+    };
+
     try {
-      await axios.post('https://localhost:7282/api/contacts', newContact, {
+      await axios.post('https://localhost:7282/api/contacts', payload, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
       fetchContacts();
-      setNewContact({ firstName: '', lastName: '', email: '', passwordHash: '', categoryId: 1 });
+      setNewContact({ firstName: '', lastName: '', email: '', passwordHash: '', categoryId: 1, subcategoryId: '', customSubcategory: '' });
     } catch (err) {
       console.error("Create error:", err);
-      alert("Failed to create contact.");
+      alert(err.response?.data || "Failed to create contact.");
     }
   };
 
@@ -106,7 +126,6 @@ function App() {
   const handleUpdate = async (e) => {
     e.preventDefault();
     
-    // Clean data before sending to C# (convert empty strings to null)
     const payload = {
       ...editingContact,
       subcategoryId: editingContact.subcategoryId === '' ? null : parseInt(editingContact.subcategoryId),
@@ -124,7 +143,7 @@ function App() {
       setEditingContact(null);
     } catch (err) {
       console.error("Update error:", err);
-      alert("Failed to update contact. Check console for details.");
+      alert(err.response?.data || "Failed to update contact. Check console for details.");
     }
   };
 
@@ -208,14 +227,39 @@ function App() {
                   value={editingContact.passwordHash}
                   onChange={(e) => setEditingContact({...editingContact, passwordHash: e.target.value})}
                 />
+                
                 <select 
                   value={editingContact.categoryId}
-                  onChange={(e) => setEditingContact({...editingContact, categoryId: parseInt(e.target.value)})}
+                  onChange={(e) => setEditingContact({...editingContact, categoryId: parseInt(e.target.value), subcategoryId: '', customSubcategory: ''})}
                 >
-                  <option value={1}>Business</option>
-                  <option value={2}>Private</option>
-                  <option value={3}>Other</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
+
+                {editingContact.categoryId === 1 && (
+                  <select 
+                    value={editingContact.subcategoryId}
+                    onChange={(e) => setEditingContact({...editingContact, subcategoryId: e.target.value})}
+                    required
+                  >
+                    <option value="">Select subcategory...</option>
+                    {categories.find(c => c.id === 1)?.subcategories?.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                )}
+
+                {editingContact.categoryId === 3 && (
+                  <input 
+                    type="text" 
+                    placeholder="Custom subcategory" 
+                    value={editingContact.customSubcategory}
+                    onChange={(e) => setEditingContact({...editingContact, customSubcategory: e.target.value})}
+                    required 
+                  />
+                )}
+
                 <button type="submit">Save Changes</button>
                 <button type="button" onClick={() => setEditingContact(null)}>Cancel</button>
               </form>
@@ -252,14 +296,39 @@ function App() {
                   onChange={(e) => setNewContact({...newContact, passwordHash: e.target.value})}
                   required 
                 />
+                
                 <select 
                   value={newContact.categoryId}
-                  onChange={(e) => setNewContact({...newContact, categoryId: parseInt(e.target.value)})}
+                  onChange={(e) => setNewContact({...newContact, categoryId: parseInt(e.target.value), subcategoryId: '', customSubcategory: ''})}
                 >
-                  <option value={1}>Business</option>
-                  <option value={2}>Private</option>
-                  <option value={3}>Other</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
+
+                {newContact.categoryId === 1 && (
+                  <select 
+                    value={newContact.subcategoryId}
+                    onChange={(e) => setNewContact({...newContact, subcategoryId: e.target.value})}
+                    required
+                  >
+                    <option value="">Select subcategory...</option>
+                    {categories.find(c => c.id === 1)?.subcategories?.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                )}
+
+                {newContact.categoryId === 3 && (
+                  <input 
+                    type="text" 
+                    placeholder="Custom subcategory" 
+                    value={newContact.customSubcategory}
+                    onChange={(e) => setNewContact({...newContact, customSubcategory: e.target.value})}
+                    required 
+                  />
+                )}
+
                 <button type="submit">Add Contact</button>
               </form>
             </div>
@@ -279,7 +348,7 @@ function App() {
             <strong>{contact.firstName} {contact.lastName}</strong>
             <div>
               Email: {contact.email} <br/>
-              Category: {contact.categoryName} {contact.subcategory ? `> ${contact.subcategory}` : ''}
+              Category: {contact.categoryName} {contact.subcategory ? `> ${contact.subcategory}` : (contact.customSubcategory ? `> ${contact.customSubcategory}` : '')}
             </div>
             
             {token && (
